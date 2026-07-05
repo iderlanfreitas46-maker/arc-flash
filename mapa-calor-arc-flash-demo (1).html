@@ -1,0 +1,306 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Mapa de Calor — Arc Flash (Subestação Genérica · Dados Fictícios)</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#05080C;
+    --panel:#0D141F;
+    --panel-2:#121B28;
+    --line:#1B2733;
+    --text:#E8EEF3;
+    --text-dim:#6B7A88;
+    --c0:#5A2A1E;
+    --c1:#B33B1E;
+    --c2:#E8632B;
+    --c3:#F5A623;
+    --c4:#FFE9A8;
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;height:100%;background:var(--bg);color:var(--text);
+    font-family:'Inter',sans-serif;overflow:hidden;}
+  .app{max-width:1080px;height:100vh;margin:0 auto;padding:16px 20px 10px;
+    display:flex;flex-direction:column;gap:10px;}
+
+  header{flex-shrink:0;}
+  .eyebrow{font-family:'IBM Plex Mono',monospace;font-size:10.5px;letter-spacing:.12em;
+    color:var(--c2);text-transform:uppercase;}
+  h1{font-family:'Space Grotesk',sans-serif;font-size:19px;font-weight:600;margin:5px 0 8px;
+    letter-spacing:-.01em;}
+  .disclaimer{display:flex;gap:8px;align-items:flex-start;background:#1F1608;
+    border:1px solid #3D2C0C;border-radius:8px;padding:8px 12px;font-size:11.5px;
+    color:#D9B45C;line-height:1.35;}
+  .disclaimer b{color:#F0CE7A;}
+
+  main{display:grid;grid-template-columns:1fr 290px;gap:14px;flex:1 1 auto;min-height:0;}
+  @media (max-width:780px){ main{grid-template-columns:1fr;} html,body{overflow:auto;} .app{height:auto;min-height:100vh;} }
+
+  .stage{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:12px;
+    display:flex;flex-direction:column;min-height:0;}
+  .svg-holder{flex:1 1 auto;min-height:0;display:flex;align-items:center;justify-content:center;}
+  .stage svg{width:100%;height:100%;display:block;}
+
+  .legend{display:flex;flex-wrap:wrap;gap:8px;margin-top:8px;padding-top:8px;
+    border-top:1px solid var(--line);flex-shrink:0;}
+  .legend-item{display:flex;align-items:center;gap:5px;font-family:'IBM Plex Mono',monospace;
+    font-size:10px;color:var(--text-dim);}
+  .legend-dot{width:9px;height:9px;border-radius:50%;flex-shrink:0;}
+
+  .panel{background:var(--panel);border:1px solid var(--line);border-radius:12px;
+    padding:14px;display:flex;flex-direction:column;min-height:0;overflow:auto;}
+  .cat-badge{display:inline-flex;align-items:center;gap:6px;font-family:'IBM Plex Mono',monospace;
+    font-size:11.5px;font-weight:600;padding:4px 9px;border-radius:6px;margin-bottom:10px;
+    width:fit-content;}
+  .zone-tag{font-family:'IBM Plex Mono',monospace;font-size:10px;color:var(--text-dim);
+    text-transform:uppercase;letter-spacing:.06em;margin-bottom:3px;}
+  .point-name{font-family:'Space Grotesk',sans-serif;font-size:15.5px;font-weight:600;
+    margin:0 0 10px;line-height:1.25;}
+  .metric-row{display:flex;justify-content:space-between;padding:6px 0;
+    border-bottom:1px solid var(--line);font-size:12.5px;}
+  .metric-row:last-of-type{border-bottom:none;}
+  .metric-label{color:var(--text-dim);}
+  .metric-value{font-family:'IBM Plex Mono',monospace;font-weight:600;}
+  .epp-box{margin-top:10px;background:var(--panel-2);border-radius:8px;padding:9px 11px;
+    font-size:11.5px;line-height:1.45;color:var(--text-dim);}
+  .epp-box b{color:var(--text);}
+
+  .dots{display:flex;gap:6px;justify-content:center;margin-top:12px;flex-shrink:0;}
+  .dot-btn{width:8px;height:8px;border-radius:50%;background:var(--line);border:none;
+    cursor:pointer;transition:.2s;padding:0;}
+  .dot-btn.active{background:var(--c2);width:20px;border-radius:5px;}
+
+  .controls{display:flex;justify-content:center;margin-top:10px;flex-shrink:0;}
+  #btnPlay{font-family:'Inter',sans-serif;font-weight:600;font-size:12px;
+    background:var(--panel-2);color:var(--text);border:1px solid var(--line);
+    border-radius:8px;padding:7px 16px;cursor:pointer;}
+  #btnPlay.playing{border-color:var(--c2);color:var(--c2);}
+
+  .stamp{font-family:'IBM Plex Mono',monospace;font-size:10px;color:#333F4A;
+    text-align:right;flex-shrink:0;}
+
+  .zone-lbl{font-family:'IBM Plex Mono',monospace;font-size:9px;fill:var(--text-dim);
+    letter-spacing:.04em;text-transform:uppercase;}
+  .zone-rect{fill:none;stroke:var(--line);stroke-width:1;}
+
+  .ring{transition:opacity .3s;}
+  .ring.dim{opacity:.4;}
+  .ring.focus{opacity:1;animation:flicker 2.4s ease-in-out infinite;}
+  .node{transition:r .3s;filter:drop-shadow(0 0 4px currentColor);}
+  .ripple{fill:none;stroke-width:2.5;opacity:0;filter:blur(.6px);}
+  .ripple.animate{animation:ripple 2.2s ease-out infinite;}
+  .ripple.animate.d2{animation-delay:.7s;}
+  .ripple.animate.d3{animation-delay:1.4s;}
+  @keyframes ripple{
+    0%{opacity:.85;transform:scale(.35);}
+    70%{opacity:.25;}
+    100%{opacity:0;transform:scale(1.05);}
+  }
+  @keyframes flicker{
+    0%,100%{opacity:1;transform:scale(1);}
+    30%{opacity:.88;transform:scale(.985);}
+    55%{opacity:.97;transform:scale(1.015);}
+    80%{opacity:.9;transform:scale(.99);}
+  }
+</style>
+</head>
+<body>
+<div class="app">
+  <header>
+    <span class="eyebrow">Conceito · Mapa de calor de energia incidente</span>
+    <h1>Arc Flash — Planta de Subestação Genérica</h1>
+    <div class="disclaimer">⚠️ <span><b>Dados fictícios.</b> Exemplo didático sobre o conceito de energia incidente de arco elétrico, com subestação genérica e valores ilustrativos, sem relação com nenhuma instalação real.</span></div>
+  </header>
+
+  <main>
+    <section class="stage">
+      <div class="svg-holder">
+      <svg id="floorplan" viewBox="0 0 400 400" xmlns="http://www.w3.org/2000/svg">
+        <defs>
+          <radialGradient id="grad0" cx="50%" cy="50%" r="50%">
+            <stop offset="0%" stop-color="#9C4A2E" stop-opacity="0.85"/>
+            <stop offset="45%" stop-color="#5A2A1E" stop-opacity="0.45"/>
+            <stop offset="100%" stop-color="#5A2A1E" stop-opacity="0"/>
+          </radialGradient>
+          <radialGradient id="grad1" cx="50%" cy="50%" r="50%">
+            <stop offset="0%" stop-color="#E1552A" stop-opacity="0.9"/>
+            <stop offset="45%" stop-color="#B33B1E" stop-opacity="0.5"/>
+            <stop offset="100%" stop-color="#B33B1E" stop-opacity="0"/>
+          </radialGradient>
+          <radialGradient id="grad2" cx="50%" cy="50%" r="50%">
+            <stop offset="0%" stop-color="#F58A3E" stop-opacity="0.92"/>
+            <stop offset="45%" stop-color="#E8632B" stop-opacity="0.5"/>
+            <stop offset="100%" stop-color="#E8632B" stop-opacity="0"/>
+          </radialGradient>
+          <radialGradient id="grad3" cx="50%" cy="50%" r="50%">
+            <stop offset="0%" stop-color="#FFCB6B" stop-opacity="0.95"/>
+            <stop offset="45%" stop-color="#F5A623" stop-opacity="0.55"/>
+            <stop offset="100%" stop-color="#F5A623" stop-opacity="0"/>
+          </radialGradient>
+          <radialGradient id="grad4" cx="50%" cy="50%" r="50%">
+            <stop offset="0%" stop-color="#FFFDF3" stop-opacity="1"/>
+            <stop offset="35%" stop-color="#FFE9A8" stop-opacity="0.7"/>
+            <stop offset="100%" stop-color="#FFE9A8" stop-opacity="0"/>
+          </radialGradient>
+          <filter id="softBlur" x="-50%" y="-50%" width="200%" height="200%">
+            <feGaussianBlur stdDeviation="1.1"/>
+          </filter>
+        </defs>
+        <rect class="zone-rect" x="10" y="10" width="380" height="380" rx="4"/>
+        <rect class="zone-rect" x="190" y="20" width="180" height="110"/>
+        <text x="196" y="34" class="zone-lbl">Pátio 69 kV</text>
+        <rect class="zone-rect" x="140" y="105" width="150" height="90"/>
+        <text x="146" y="119" class="zone-lbl">Pátio do Transformador</text>
+        <rect class="zone-rect" x="30" y="185" width="200" height="110"/>
+        <text x="36" y="199" class="zone-lbl">Sala de Painéis 13,8 kV</text>
+        <rect class="zone-rect" x="15" y="285" width="160" height="95"/>
+        <text x="21" y="299" class="zone-lbl">Sala de Painéis BT</text>
+        <g id="pointsLayer"></g>
+      </svg>
+      </div>
+
+      <div class="legend" id="legend"></div>
+    </section>
+
+    <aside class="panel">
+      <div class="zone-tag" id="zoneTag"></div>
+      <h2 class="point-name" id="pointName"></h2>
+      <div class="cat-badge" id="catBadge"></div>
+      <div class="metric-row"><span class="metric-label">Tensão</span><span class="metric-value" id="mTensao"></span></div>
+      <div class="metric-row"><span class="metric-label">Energia incidente</span><span class="metric-value" id="mEnergia"></span></div>
+      <div class="metric-row"><span class="metric-label">Limite de arco (AFB)</span><span class="metric-value" id="mAfb"></span></div>
+      <div class="epp-box"><b>EPP recomendado:</b> <span id="mEpp"></span></div>
+
+      <div class="dots" id="dots"></div>
+      <div class="controls"><button id="btnPlay">⏸ Pausar demo</button></div>
+    </aside>
+  </main>
+
+  <div class="stamp">Iderlan Freitas — Engenheiro Eletricista · valores fictícios</div>
+</div>
+
+<script>
+const CATS = {
+  0:{color:'var(--c0)', label:'Categoria 0', range:'< 1,2 cal/cm²'},
+  1:{color:'var(--c1)', label:'Categoria 1', range:'1,2 – 4 cal/cm²'},
+  2:{color:'var(--c2)', label:'Categoria 2', range:'4 – 8 cal/cm²'},
+  3:{color:'var(--c3)', label:'Categoria 3', range:'8 – 25 cal/cm²'},
+  4:{color:'var(--c4)', label:'Categoria 4', range:'> 25 cal/cm²'},
+};
+
+const POINTS = [
+  {id:'entrada', zone:'Pátio 69 kV', name:'Disjuntor de Entrada 69 kV', tensao:'69 kV',
+   energia:34.7, categoria:4, afb:2100, epp:'Vestimenta arc-rated categoria 4 (≥40 cal/cm²), capuz e luvas de alta tensão. Trabalho a distância sempre que possível.',
+   x:290, y:70},
+  {id:'bus', zone:'Sala de Painéis 13,8 kV', name:'Barra Principal 13,8 kV', tensao:'13,8 kV',
+   energia:11.4, categoria:3, afb:900, epp:'Vestimenta arc-rated categoria 3 (≥25 cal/cm²), capuz com viseira e luvas isolantes.',
+   x:110, y:230},
+  {id:'xfmr', zone:'Pátio do Transformador', name:'Transformador T-1 69/13,8 kV', tensao:'69/13,8 kV',
+   energia:6.8, categoria:2, afb:550, epp:'Vestimenta arc-rated categoria 2 (≥8 cal/cm²) e protetor facial.',
+   x:230, y:150},
+  {id:'feeder', zone:'Sala de Painéis 13,8 kV', name:'Alimentador Secundário 13,8 kV', tensao:'13,8 kV',
+   energia:2.6, categoria:1, afb:280, epp:'Vestimenta arc-rated categoria 1 (≥4 cal/cm²).',
+   x:190, y:260},
+  {id:'lv', zone:'Sala de Painéis BT', name:'Painel de Controle BT', tensao:'440 V',
+   energia:0.8, categoria:0, afb:150, epp:'Vestimenta de trabalho padrão. Risco de arco mínimo neste ponto.',
+   x:80, y:335},
+];
+
+function radiusFor(energia){ return 14 + Math.sqrt(energia)*13; }
+
+const pointsLayer = document.getElementById('pointsLayer');
+POINTS.forEach((p,i)=>{
+  const cat = CATS[p.categoria];
+  const r = radiusFor(p.energia);
+  const g = document.createElementNS('http://www.w3.org/2000/svg','g');
+  g.innerHTML = `
+    <circle class="ring dim" id="ring-${p.id}" cx="${p.x}" cy="${p.y}" r="${r*1.4}" fill="url(#grad${p.categoria})" filter="url(#softBlur)"/>
+    <circle class="ripple" id="rip1-${p.id}" cx="${p.x}" cy="${p.y}" r="${r}" stroke="${cat.color}"/>
+    <circle class="ripple" id="rip2-${p.id}" cx="${p.x}" cy="${p.y}" r="${r}" stroke="${cat.color}"/>
+    <circle class="node" cx="${p.x}" cy="${p.y}" r="5.5" fill="${cat.color}" style="color:${cat.color}"/>
+  `;
+  pointsLayer.appendChild(g);
+});
+
+document.getElementById('legend').innerHTML = Object.entries(CATS).map(([k,c])=>`
+  <span class="legend-item"><span class="legend-dot" style="background:radial-gradient(circle, ${c.color}, transparent)"></span>${c.label} (${c.range})</span>
+`).join('');
+
+document.getElementById('dots').innerHTML = POINTS.map((p,i)=>`
+  <button class="dot-btn" data-idx="${i}"></button>
+`).join('');
+
+let activeIdx = 0;
+let demoOn = true;
+let timer = null;
+
+function setActive(idx){
+  activeIdx = idx;
+  const p = POINTS[idx];
+  const cat = CATS[p.categoria];
+
+  POINTS.forEach(pt=>{
+    const ring = document.getElementById('ring-'+pt.id);
+    const rip1 = document.getElementById('rip1-'+pt.id);
+    const rip2 = document.getElementById('rip2-'+pt.id);
+    const isActive = pt.id === p.id;
+    ring.classList.toggle('dim', !isActive);
+    ring.classList.toggle('focus', isActive);
+    rip1.classList.toggle('animate', isActive);
+    rip2.classList.toggle('animate', isActive);
+    rip2.classList.toggle('d2', isActive);
+  });
+
+  document.getElementById('zoneTag').textContent = p.zone;
+  document.getElementById('pointName').textContent = p.name;
+  document.getElementById('catBadge').innerHTML = `<span style="width:8px;height:8px;border-radius:50%;background:${cat.color};display:inline-block;margin-right:4px;"></span>${cat.label} · ${cat.range}`;
+  document.getElementById('catBadge').style.background = 'var(--panel-2)';
+  document.getElementById('catBadge').style.color = cat.color;
+  document.getElementById('mTensao').textContent = p.tensao;
+  document.getElementById('mEnergia').textContent = p.energia.toFixed(1) + ' cal/cm²';
+  document.getElementById('mAfb').textContent = p.afb + ' mm';
+  document.getElementById('mEpp').textContent = p.epp;
+
+  document.querySelectorAll('.dot-btn').forEach((d,i)=> d.classList.toggle('active', i===idx));
+}
+
+function advance(){
+  setActive((activeIdx+1) % POINTS.length);
+}
+
+function demoLoop(){
+  if(!demoOn) return;
+  timer = setTimeout(()=>{ advance(); demoLoop(); }, 3600);
+}
+
+function pauseDemo(){
+  demoOn = false;
+  clearTimeout(timer);
+  document.getElementById('btnPlay').textContent = '▶ Iniciar demo';
+  document.getElementById('btnPlay').classList.remove('playing');
+}
+function resumeDemo(){
+  demoOn = true;
+  document.getElementById('btnPlay').textContent = '⏸ Pausar demo';
+  document.getElementById('btnPlay').classList.add('playing');
+  demoLoop();
+}
+
+document.getElementById('btnPlay').addEventListener('click', ()=>{
+  demoOn ? pauseDemo() : resumeDemo();
+});
+document.querySelectorAll('.dot-btn').forEach(btn=>{
+  btn.addEventListener('click', ()=>{
+    pauseDemo();
+    setActive(parseInt(btn.dataset.idx));
+  });
+});
+
+setActive(0);
+resumeDemo();
+</script>
+</body>
+</html>
